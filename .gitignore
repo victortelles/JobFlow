@@ -1,0 +1,43 @@
+# =========================================================================
+# JobFlow Git Ignore Configuration
+# =========================================================================
+
+# --- Personal and Sensitive Data ---
+# Ignore the personal Excel spreadsheets containing application logs
+data/*.xlsx
+*.xlsx
+
+# --- Playwright Browser Profiles & Sessions ---
+# Ignore the local persistent Google Chrome profile directory containing cookies and sessions
+.chrome_profile/
+
+# --- Python Environment & Packages ---
+venv/
+.venv/
+env/
+ENV/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+build/
+dist/
+wheels/
+
+# --- Streamlit Configurations & Secrets ---
+.streamlit/secrets.toml
+
+# --- IDEs, Editors & Project metadata ---
+.vscode/
+.idea/
+*.swp
+*~
+.project
+.pydevproject
+
+# --- System specific files ---
+.DS_Store
+Thumbs.db
+Desktop.ini
