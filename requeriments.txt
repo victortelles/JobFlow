@@ -1,0 +1,6 @@
+streamlit
+playwright
+openpyxl
+pandas
+plotly
+python-dateutil

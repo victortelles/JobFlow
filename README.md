@@ -100,6 +100,7 @@ jobflow/
 
 ## 💡 Consejos de Uso
 
+- **URL de la vacante:**  Copia directamente el link del apartado de compartir la vacante para que sea una extracion mas exacta.
 - **Sesión de Navegador Activa:** Para una extracción fluida en LinkedIn o Glassdoor sin pantallas de inicio de sesión ni bloqueos, abre una vez la vacante en tu navegador normal. Al utilizar Playwright con perfiles persistentes en `./.chrome_profile`, la aplicación heredará el contexto y podrá interactuar de manera transparente.
 - **Formato de Fecha:** El campo de fecha de postulación se guarda de manera totalmente automática con el día de registro.
 - **Edición Rápida:** Puedes editar las notas de seguimiento o marcar el estado de respuesta de varias vacantes en lote desde la tabla "Mis postulaciones" y persistirlos todos de una sola vez haciendo clic en **"Guardar Cambios"**.
