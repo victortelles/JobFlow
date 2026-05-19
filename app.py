@@ -145,7 +145,7 @@ with st.sidebar:
     st.markdown("""
     <div style='background: rgba(30,41,59,0.5); padding: 1rem; border-radius: 8px; border: 1px solid #334155; font-size: 0.8rem; color: #94a3b8;'>
         <strong>💡 Tip de Uso:</strong><br>
-        Asegúrate de tener iniciada sesión en tu navegador normal para que Playwright herede tus cookies de LinkedIn/Glassdoor sin captchas.
+        Asegúrate de tener iniciada sesión en tu navegador normal para que Playwright herede tus cookies de LinkedIn sin captchas.
     </div>
     """, unsafe_allow_html=True)
 
@@ -157,36 +157,85 @@ st.markdown("<div class='app-subtitle'>Seguimiento inteligente y automático de 
 if menu == "➕ Nueva postulación":
     st.markdown("<div class='section-header'>➕ Registrar Nueva Postulación</div>", unsafe_allow_html=True)
     
-    # 1. Scraping Section
-    st.markdown("##### 🔗 Pegar enlace de la vacante")
-    col_input, col_btn = st.columns([4, 1])
+    # 1. Extraction Section
+    st.markdown("##### Pegar enlace de la vacante")
+    col_input, col_plat, col_btn = st.columns([3, 1.2, 0.8])
     
     with col_input:
         url_input = st.text_input(
             "URL de la vacante", 
-            placeholder="Pega la URL de LinkedIn, Glassdoor, Indeed o cualquier otra web de empleo...",
+            placeholder="Pega la URL de LinkedIn, Indeed o cualquier otra web de empleo...",
+            label_visibility="collapsed",
+            key="url_input"
+        )
+    with col_plat:
+        platform_override_link = st.selectbox(
+            "Plantilla / Plataforma:",
+            ["Auto-detectar", "LinkedIn", "Indeed", "Otro"],
+            key="link_platform_override",
             label_visibility="collapsed"
         )
     with col_btn:
-        extract_clicked = st.button("🔍 Analizar Vacante")
+        extract_clicked = st.button("🔍 Analizar Enlace", key="btn_extract_link", width="stretch")
         
     if extract_clicked:
         if not url_input.strip():
             st.error("Por favor, ingresa una URL válida.")
         else:
             with st.spinner("Abriendo navegador local (Playwright) y extrayendo detalles..."):
-                scraped_data = scrape_job(url_input)
+                scraped_data = scrape_job(url_input, platform_override=platform_override_link)
                 st.session_state['parsed_job'] = scraped_data
                 st.session_state['scraped_url'] = url_input
-                st.success("¡Datos extraídos! Por favor verifica y edita la información abajo antes de guardar.")
+                st.success("¡Enlace analizado! Por favor verifica y edita la información abajo antes de guardar.")
 
     st.write("---")
     
     # 2. Form Section
     if st.session_state['parsed_job'] is not None:
-        st.markdown("##### 📝 Confirmar y Editar Detalles de la Vacante")
-        
         job_data = st.session_state['parsed_job']
+        
+        # --- DUPLICATE CHECKER ---
+        df_existing = load_data()
+        is_duplicate = False
+        duplicate_id = None
+        duplicate_date = None
+        
+        target_title = job_data.get('titulo', '').strip().lower()
+        target_company = job_data.get('empresa', '').strip().lower()
+        target_url = job_data.get('url_vacante', '').strip()
+        
+        if not df_existing.empty and target_title and target_company:
+            matches = df_existing[
+                (df_existing['titulo'].str.strip().str.lower() == target_title) &
+                (df_existing['empresa'].str.strip().str.lower() == target_company)
+            ]
+            
+            if not matches.empty:
+                is_duplicate = True
+                duplicate_row = matches.iloc[0]
+                duplicate_id = duplicate_row['id']
+                duplicate_date = duplicate_row['fecha_postulacion']
+            elif target_url and target_url != "Texto Pegado Manualmente" and target_url != "":
+                url_matches = df_existing[df_existing['url_vacante'] == target_url]
+                if not url_matches.empty:
+                    is_duplicate = True
+                    duplicate_row = url_matches.iloc[0]
+                    duplicate_id = duplicate_row['id']
+                    duplicate_date = duplicate_row['fecha_postulacion']
+                    
+        if is_duplicate:
+            st.warning(
+                f"⚠️ **¡Alerta de Vacante Duplicada!** Ya tienes registrada esta postulación en tu historial:\n\n"
+                f"*   **Puesto**: {job_data.get('titulo')}\n"
+                f"*   **Empresa**: {job_data.get('empresa')}\n"
+                f"*   **ID en Registro**: {duplicate_id}\n"
+                f"*   **Fecha de Registro**: {duplicate_date}\n\n"
+                f"Puedes guardarlo de todas formas si es un puesto diferente o actualizar tus notas desde **📋 Mis postulaciones**."
+            )
+        else:
+            st.info("✨ ¡Nueva vacante detectada! Confirma y edita la información abajo para guardarla.")
+            
+        st.markdown("##### 📝 Confirmar y Editar Detalles de la Vacante")
         
         with st.form("job_form", clear_on_submit=True):
             col1, col2 = st.columns(2)
@@ -202,9 +251,9 @@ if menu == "➕ Nueva postulación":
                 modality = st.selectbox("Modalidad", modalities, index=modal_idx)
                 
             with col2:
-                turns = ["Tiempo completo", "Medio tiempo", "Por proyecto", "No especificado"]
+                turns = ["Tiempo completo", "Medio tiempo", "Por tiempo indeterminado", "Por proyecto", "Prácticas", "No especificado"]
                 current_turn = job_data.get('turno', 'No especificado')
-                turn_idx = turns.index(current_turn) if current_turn in turns else 3
+                turn_idx = turns.index(current_turn) if current_turn in turns else 5
                 turn = st.selectbox("Turno / Tipo de Contrato", turns, index=turn_idx)
                 
                 exp_levels = ["Junior", "Mid", "Senior", "No especificado"]
@@ -323,7 +372,7 @@ elif menu == "📋 Mis postulaciones":
             },
             disabled=disabled_cols,
             hide_index=True,
-            use_container_width=True
+            width="stretch"
         )
         
         col_space, col_save = st.columns([4, 1])
@@ -394,14 +443,17 @@ else:
         # Display Charts in grid
         row1_col1, row1_col2 = st.columns(2)
         with row1_col1:
-            st.plotly_chart(get_response_rate_chart(df), use_container_width=True)
+            st.plotly_chart(get_response_rate_chart(df), width="stretch")
         with row1_col2:
-            st.plotly_chart(get_applications_over_time_chart(df), use_container_width=True)
+            # Let the user choose grouping between Weeks and Months
+            group_by = st.selectbox("Agrupar postulaciones por:", ["Semanas", "Meses"], index=0, key="group_by_chart")
+            group_param = "Semana" if group_by == "Semanas" else "Mes"
+            st.plotly_chart(get_applications_over_time_chart(df, group_by=group_param), width="stretch")
             
         st.write("---")
         
         row2_col1, row2_col2 = st.columns(2)
         with row2_col1:
-            st.plotly_chart(get_platform_distribution_chart(df), use_container_width=True)
+            st.plotly_chart(get_platform_distribution_chart(df), width="stretch")
         with row2_col2:
-            st.plotly_chart(get_top_skills_chart(df), use_container_width=True)
+            st.plotly_chart(get_top_skills_chart(df), width="stretch")

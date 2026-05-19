@@ -132,17 +132,17 @@ def parse(html_content: str, url: str) -> dict:
         if title_match:
             data['titulo'] = title_match.group(1).strip()
         else:
-            data['titulo'] = "Vacante no especificada"
+            data['titulo'] = ""
             
     if not data.get('empresa'):
-        data['empresa'] = "No especificada"
+        data['empresa'] = ""
         
     if not data.get('ubicacion'):
         # Simple heuristics for remote
         if re.search(r'\bremoto\b|\bremote\b', html_content, re.IGNORECASE):
             data['ubicacion'] = "Remoto"
         else:
-            data['ubicacion'] = "No especificada"
+            data['ubicacion'] = ""
             
     if not data.get('descripcion_corta'):
         # Just grab first few body texts
@@ -161,9 +161,9 @@ def parse(html_content: str, url: str) -> dict:
     data['plataforma'] = "Otro"
     
     # Default placeholder values if not found
-    data['modalidad'] = "Remoto" if "remoto" in data.get('ubicacion', '').lower() else "No especificada"
-    data['turno'] = data.get('turno', "No especificado")
-    data['nivel_experiencia'] = "No especificado"
+    data['modalidad'] = "Remoto" if "remoto" in data.get('ubicacion', '').lower() else ""
+    data['turno'] = data.get('turno', "")
+    data['nivel_experiencia'] = data.get('nivel_experiencia', "")
     data['salario'] = data.get('salario', "")
     data['fecha_publicacion'] = data.get('fecha_publicacion', "")
     

@@ -54,39 +54,68 @@ def get_response_rate_chart(df: pd.DataFrame) -> go.Figure:
     )
     return fig
 
-def get_applications_over_time_chart(df: pd.DataFrame) -> go.Figure:
+def get_applications_over_time_chart(df: pd.DataFrame, group_by: str = "Semana") -> go.Figure:
     """
-    Generates a Bar/Line Chart showing the number of job applications submitted over time.
+    Generates a Bar Chart showing the number of job applications submitted over time,
+    grouped by 'Semana' (Weeks) or 'Mes' (Months).
     """
     if df.empty:
         fig = go.Figure()
         fig.update_layout(title="Sin datos disponibles", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
         return fig
         
-    # Standardize fecha_postulacion to date type
     df_dates = df.copy()
-    df_dates['fecha_postulacion'] = pd.to_datetime(df_dates['fecha_postulacion']).dt.date
+    # Safely convert to datetime
+    df_dates['fecha_dt'] = pd.to_datetime(df_dates['fecha_postulacion'], errors='coerce')
+    # Filter out NaT
+    df_dates = df_dates.dropna(subset=['fecha_dt'])
     
-    # Group by date
-    timeline = df_dates.groupby('fecha_postulacion').size().reset_index(name='Postulaciones')
-    timeline = timeline.sort_values('fecha_postulacion')
+    if df_dates.empty:
+        fig = go.Figure()
+        fig.update_layout(title="Sin fechas válidas", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        return fig
+        
+    if group_by == "Mes":
+        # Group by Month
+        df_dates['Periodo'] = df_dates['fecha_dt'].dt.to_period('M').dt.to_timestamp()
+        title = "Postulaciones por Mes"
+        label_x = 'Mes'
+    else:
+        # Group by Week (Starts on Monday)
+        df_dates['Periodo'] = df_dates['fecha_dt'].dt.to_period('W').dt.to_timestamp()
+        title = "Postulaciones por Semana"
+        label_x = 'Semana'
+        
+    # Group by the Periodo
+    timeline = df_dates.groupby('Periodo').size().reset_index(name='Postulaciones')
+    timeline = timeline.sort_values('Periodo')
     
+    if group_by == "Semana":
+        # Format label: "Semana del YYYY-MM-DD"
+        timeline['x_label'] = timeline['Periodo'].dt.strftime('Semana del %Y-%m-%d')
+    else:
+        # Format label: "Ene 2026", "Feb 2026", etc. in Spanish
+        meses_es = {
+            1: "Ene", 2: "Feb", 3: "Mar", 4: "Abr", 5: "May", 6: "Jun",
+            7: "Jul", 8: "Ago", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dic"
+        }
+        timeline['x_label'] = timeline['Periodo'].apply(lambda x: f"{meses_es[x.month]} {x.year}")
+        
     fig = px.bar(
         timeline,
-        x='fecha_postulacion',
+        x='x_label',
         y='Postulaciones',
-        title="Postulaciones por Día",
-        labels={'fecha_postulacion': 'Fecha', 'Postulaciones': 'Cantidad'}
+        title=title,
+        labels={'x_label': label_x, 'Postulaciones': 'Cantidad'}
     )
     
     fig.update_traces(marker_color="#3b82f6", marker_line_color="#1d4ed8", marker_line_width=1.5, opacity=0.85)
     fig.update_layout(
         margin=dict(t=50, b=10, l=10, r=10),
-        xaxis_tickformat='%Y-%m-%d',
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         font=dict(color="#f3f4f6"),
-        xaxis=dict(showgrid=False),
+        xaxis=dict(showgrid=False, type='category'), # 'category' prevents empty spaces on the timeline
         yaxis=dict(showgrid=True, gridcolor="#374151")
     )
     return fig

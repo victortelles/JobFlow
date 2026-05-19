@@ -1,5 +1,5 @@
 from . import linkedin
-from . import glassdoor
+from . import indeed
 from . import generic
 
 def parse_job_by_platform(html_content: str, url: str, platform: str) -> dict:
@@ -10,7 +10,7 @@ def parse_job_by_platform(html_content: str, url: str, platform: str) -> dict:
     
     if "linkedin" in normalized_platform:
         return linkedin.parse(html_content, url)
-    elif "glassdoor" in normalized_platform:
-        return glassdoor.parse(html_content, url)
+    elif "indeed" in normalized_platform:
+        return indeed.parse(html_content, url)
     else:
         return generic.parse(html_content, url)
