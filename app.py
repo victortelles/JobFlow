@@ -4,7 +4,7 @@ import datetime
 
 # Import project modules
 from storage import load_data, save_data, add_postulacion
-from scraper import scrape_job
+from scraper import scrape_job, run_manual_login, check_session_status
 from charts import (
     get_response_rate_chart,
     get_applications_over_time_chart,
@@ -120,6 +120,24 @@ st.markdown("""
     .stForm div.stButton > button {
         width: 100% !important;
     }
+    
+    /* Sidebar Login Button (Solid Blue) */
+    div[data-testid="stSidebar"] div.stButton > button {
+        background: #2563eb !important;
+        color: white !important;
+        border: 1px solid #3b82f6 !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 1.8rem !important;
+        font-weight: 600 !important;
+        width: 100% !important;
+        transition: all 0.2s ease-in-out !important;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3) !important;
+    }
+    div[data-testid="stSidebar"] div.stButton > button:hover {
+        background: #1d4ed8 !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0 6px 15px rgba(37, 99, 235, 0.45) !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,6 +146,12 @@ if 'parsed_job' not in st.session_state:
     st.session_state['parsed_job'] = None
 if 'scraped_url' not in st.session_state:
     st.session_state['scraped_url'] = ""
+if 'session_checked' not in st.session_state:
+    st.session_state['session_checked'] = False
+if 'linkedin_active' not in st.session_state:
+    st.session_state['linkedin_active'] = False
+if 'indeed_active' not in st.session_state:
+    st.session_state['indeed_active'] = False
 
 # ----------------- NAVIGATION (SIDEBAR) -----------------
 with st.sidebar:
@@ -142,10 +166,88 @@ with st.sidebar:
     )
     
     st.write("---")
+    
+    # --- SESSION STATUS & MANUAL LOGIN ---
+    st.markdown("<p style='font-size: 0.95rem; font-weight: 600; color: #06b6d4; margin-bottom: 0.5rem;'>🔑 Estado de Sesiones</p>", unsafe_allow_html=True)
+    
+    li_status = "🟢 Activo" if st.session_state['linkedin_active'] else ("🔴 Inactivo" if st.session_state['session_checked'] else "⏳ Sin verificar")
+    ind_status = "🟢 Activo" if st.session_state['indeed_active'] else ("🔴 Inactivo" if st.session_state['session_checked'] else "⏳ Sin verificar")
+    
+    st.markdown(f"""
+    <div style='background: rgba(30, 41, 59, 0.4); padding: 0.75rem; border-radius: 8px; border: 1px solid #1e293b; font-size: 0.8rem; margin-bottom: 0.8rem;'>
+        <div style='display: flex; justify-content: space-between; margin-bottom: 6px;'>
+            <span>LinkedIn:</span> <strong style='color: {"#10b981" if st.session_state["linkedin_active"] else ("#f43f5e" if st.session_state["session_checked"] else "#94a3b8")};'>{li_status}</strong>
+        </div>
+        <div style='display: flex; justify-content: space-between;'>
+            <span>Indeed:</span> <strong style='color: {"#10b981" if st.session_state["indeed_active"] else ("#f43f5e" if st.session_state["session_checked"] else "#94a3b8")};'>{ind_status}</strong>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # --- ACTIONS: VERIFICATION & CONDITIONAL MANUAL LOGIN ---
+    if st.button("🔍 Verificar Estado", key="btn_verify_sessions", use_container_width=True):
+        with st.spinner("Comprobando..."):
+            try:
+                res = check_session_status()
+                st.session_state['linkedin_active'] = res['linkedin']
+                st.session_state['indeed_active'] = res['indeed']
+                st.session_state['session_checked'] = True
+                st.rerun()
+            except Exception as e:
+                st.error("Error al verificar. Cierra otras ventanas de Chrome de JobFlow.")
+                
+    if st.session_state['session_checked']:
+        has_inactive = not st.session_state['linkedin_active'] or not st.session_state['indeed_active']
+        
+        if has_inactive:
+            inactive_services = []
+            if not st.session_state['linkedin_active']:
+                inactive_services.append("LinkedIn")
+            if not st.session_state['indeed_active']:
+                inactive_services.append("Indeed")
+                
+            services_str = " e ".join(inactive_services)
+            
+            # Informative warning message
+            st.markdown(f"""
+            <div style='background: rgba(244, 63, 94, 0.12); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(244, 63, 94, 0.25); font-size: 0.8rem; color: #fda4af; margin-top: 0.8rem; margin-bottom: 0.8rem;'>
+                <strong>⚠️ Sesión inactiva en {services_str}:</strong><br>
+                Inicia sesión manualmente para heredar las credenciales correctas a Playwright.
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Show manual login button stacked vertically
+            if st.button("🌐 Iniciar Sesión Manual", key="btn_manual_login", use_container_width=True):
+                with st.spinner("Abriendo Chrome..."):
+                    try:
+                        run_manual_login()
+                        # Auto-check after manual login
+                        res = check_session_status()
+                        st.session_state['linkedin_active'] = res['linkedin']
+                        st.session_state['indeed_active'] = res['indeed']
+                        st.session_state['session_checked'] = True
+                        st.rerun()
+                    except Exception as e:
+                        st.error("Error al abrir Chrome. Cierra otras ventanas de JobFlow.")
+        else:
+            # Both active - Success Card
+            st.markdown("""
+            <div style='background: rgba(16, 185, 129, 0.12); padding: 0.8rem; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.25); font-size: 0.8rem; color: #a7f3d0; margin-top: 0.8rem; margin-bottom: 0.8rem; text-align: center;'>
+                <strong>🟢 ¡Sesiones Activas!</strong><br>
+                Todo listo para la extracción de vacantes.
+            </div>
+            """, unsafe_allow_html=True)
+            
+                    
+    # --- FOOTER / DEVELOPER CREDITS ---
     st.markdown("""
-    <div style='background: rgba(30,41,59,0.5); padding: 1rem; border-radius: 8px; border: 1px solid #334155; font-size: 0.8rem; color: #94a3b8;'>
-        <strong>💡 Tip de Uso:</strong><br>
-        Asegúrate de tener iniciada sesión en tu navegador normal para que Playwright herede tus cookies de LinkedIn sin captchas.
+    <div style='margin-top: 2rem; text-align: center;'>
+        <hr style='border-color: #1e293b; margin-bottom: 1rem;' />
+        <p style='font-size: 0.75rem; color: #64748b; margin: 0;'>Desarrollado por</p>
+        <a href='https://github.com/victortelles' target='_blank' style='color: #06b6d4; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px;'>
+            <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16" height="1.1em" width="1.1em" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle;"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+            AHTyler
+        </a>
     </div>
     """, unsafe_allow_html=True)
 

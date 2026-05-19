@@ -182,3 +182,105 @@ def scrape_job(url: str, platform_override: str = "Auto-detectar") -> dict:
         parsed_data['plataforma'] = 'Indeed'
         
     return parsed_data
+
+
+def run_manual_login():
+    """
+    Launches Chromium with the persistent user profile in non-headless mode,
+    opening LinkedIn and Indeed login pages, and waits until the browser window is closed.
+    This allows the user to manually log in and resolve any captchas or 2FA.
+    """
+    os.makedirs(USER_DATA_DIR, exist_ok=True)
+    with sync_playwright() as p:
+        # Launch persistent browser context to retain sessions and credentials
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=USER_DATA_DIR,
+            headless=False,
+            args=[
+                "--start-maximized",
+                "--disable-blink-features=AutomationControlled"
+            ],
+            no_viewport=True,
+            timeout=0  # Disable launch timeout
+        )
+        
+        # Create/get first page
+        page = context.pages[0] if context.pages else context.new_page()
+        
+        # Go to LinkedIn Login
+        try:
+            page.goto("https://www.linkedin.com/login", wait_until="domcontentloaded", timeout=30000)
+        except Exception as e:
+            print(f"Error navigating to LinkedIn: {e}")
+            
+        # Create a second page/tab for Indeed login
+        try:
+            page2 = context.new_page()
+            page2.goto("https://www.indeed.com", wait_until="domcontentloaded", timeout=30000)
+        except Exception as e:
+            print(f"Error navigating to Indeed: {e}")
+        
+        # Keep browser open while there are open pages/windows
+        # When the user closes the browser or all tabs, the loop will exit.
+        try:
+            while True:
+                # Check if all pages are closed or if context is closed
+                if not context.pages:
+                    break
+                # Wait a bit
+                page.wait_for_timeout(1000)
+        except Exception as loop_err:
+            print(f"Manual login loop finished/interrupted: {loop_err}")
+        finally:
+            try:
+                context.close()
+            except Exception:
+                pass
+
+
+def check_session_status() -> dict:
+    """
+    Launches Chromium in headless mode with the persistent user profile
+    to check if there are active sessions (logged-in states) for LinkedIn and Indeed.
+    Returns a dictionary with status boolean values for 'linkedin' and 'indeed'.
+    Raises an exception if the Chrome profile is locked or Chromium fails to launch.
+    """
+    os.makedirs(USER_DATA_DIR, exist_ok=True)
+    status = {"linkedin": False, "indeed": False}
+    
+    with sync_playwright() as p:
+        # Launch persistent browser context. If it is locked, this raises an exception.
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=USER_DATA_DIR,
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled"
+            ],
+            no_viewport=True,
+            timeout=10000
+        )
+        
+        try:
+            page = context.pages[0] if context.pages else context.new_page()
+            
+            # Check LinkedIn login status
+            try:
+                page.goto("https://www.linkedin.com/feed", wait_until="domcontentloaded", timeout=8000)
+                status["linkedin"] = "linkedin.com/feed" in page.url and "login" not in page.url and "signup" not in page.url
+            except Exception as e:
+                print(f"LinkedIn session check error: {e}")
+                status["linkedin"] = False
+                
+            # Check Indeed login status
+            try:
+                page.goto("https://www.indeed.com/myjobs", wait_until="domcontentloaded", timeout=8000)
+                status["indeed"] = "secure.indeed.com" not in page.url and "login" not in page.url
+            except Exception as e:
+                print(f"Indeed session check error: {e}")
+                status["indeed"] = False
+        finally:
+            context.close()
+            
+    return status
+
+
