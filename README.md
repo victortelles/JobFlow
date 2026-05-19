@@ -104,3 +104,24 @@ jobflow/
 - **Sesión de Navegador Activa:** Para una extracción fluida en LinkedIn o Glassdoor sin pantallas de inicio de sesión ni bloqueos, abre una vez la vacante en tu navegador normal. Al utilizar Playwright con perfiles persistentes en `./.chrome_profile`, la aplicación heredará el contexto y podrá interactuar de manera transparente.
 - **Formato de Fecha:** El campo de fecha de postulación se guarda de manera totalmente automática con el día de registro.
 - **Edición Rápida:** Puedes editar las notas de seguimiento o marcar el estado de respuesta de varias vacantes en lote desde la tabla "Mis postulaciones" y persistirlos todos de una sola vez haciendo clic en **"Guardar Cambios"**.
+
+## Capturas de la aplicacion
+JobFlow es una aplicacion que te ayudara a gestionar las postulaciones que has mandado peticion de solicitud de trabajo a las empresas. Cuenta con una tabla de excel para almacenar la informacion junto con el link de publicacion mismo caso una dashboard de cuantas peticiones se han enviado y ver tipos de tecnologias que mas buscan y mas.
+
+Lo unico que tienes que hacer es:
+1. Iniciar sesion en LinkedIn, Indeed (Por ahora solo estas dos).
+2. Copiar el link de la vacante (al que mandaste la peticion de empleo).
+3. Pegar el link en la aplicacion.
+4. La aplicacion extraera la informacion de la vacante.
+5. Revisar y corregir
+6. Guardar la informacion.
+7. Puedes ver la dashboard para ver estadisticas de tus postulaciones.
+
+
+![pantalla-inicial](public/inicial.png)
+
+![busqueda](public/busqueda.png)
+
+![postulaciones](public/postulaciones.png)
+
+![graficas](public/graficas.png)
