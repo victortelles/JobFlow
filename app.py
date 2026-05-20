@@ -156,7 +156,7 @@ if 'indeed_active' not in st.session_state:
 # ----------------- NAVIGATION (SIDEBAR) -----------------
 with st.sidebar:
     # Render Sidebar Logo Image
-    st.image("public/JobFlow.png", use_container_width=True)
+    st.image("public/JobFlow.png", width="stretch")
     st.markdown("<p style='text-align: center; color: #64748b; font-size: 0.85rem; margin-top: -0.5rem;'>Gestor Local de Postulaciones</p>", unsafe_allow_html=True)
     st.write("---")
     
@@ -186,7 +186,7 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     # --- ACTIONS: VERIFICATION & CONDITIONAL MANUAL LOGIN ---
-    if st.button("🔍 Verificar Estado", key="btn_verify_sessions", use_container_width=True):
+    if st.button("🔍 Verificar Estado", key="btn_verify_sessions", width="stretch"):
         with st.spinner("Comprobando..."):
             try:
                 res = check_session_status()
@@ -218,7 +218,7 @@ with st.sidebar:
             """, unsafe_allow_html=True)
             
             # Show manual login button stacked vertically
-            if st.button("🌐 Iniciar Sesión Manual", key="btn_manual_login", use_container_width=True):
+            if st.button("🌐 Iniciar Sesión Manual", key="btn_manual_login", width="stretch"):
                 with st.spinner("Abriendo Chrome..."):
                     try:
                         run_manual_login()
@@ -255,7 +255,7 @@ with st.sidebar:
 # ----------------- APP HEADER -----------------
 col_logo_left, col_logo_center, col_logo_right = st.columns([1, 1.2, 1])
 with col_logo_center:
-    st.image("public/JobFlow.png", use_container_width=True)
+    st.image("public/JobFlow.png", width="stretch")
 st.markdown("<div class='app-subtitle' style='margin-top: -1rem;'>Seguimiento inteligente y automático de tu búsqueda de empleo</div>", unsafe_allow_html=True)
 
 # ----------------- VIEW 1: NUEVA POSTULACIÓN -----------------
